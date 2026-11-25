@@ -1,0 +1,121 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "要发布的 tag，例如 v1.0.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Resolve and verify version
+        id: meta
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            $tag = '${{ inputs.tag }}'
+          } else {
+            $tag = '${{ github.ref_name }}'
+          }
+          if ([string]::IsNullOrWhiteSpace($tag)) { throw 'tag 不能为空' }
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ("v$version" -ne $tag) {
+            throw "tag $tag 与 package.json 版本 v$version 不一致"
+          }
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build JSX
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm run build
+          $jsx = 'dist/Balloonist.jsx'
+          if (-not (Test-Path $jsx)) { throw "构建产物缺失: $jsx" }
+          $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path $jsx))
+          if ($bytes.Length -lt 3 -or $bytes[0] -ne 0xEF -or $bytes[1] -ne 0xBB -or $bytes[2] -ne 0xBF) {
+            throw "构建产物缺少 UTF-8 BOM: $jsx"
+          }
+          $lines = (Get-Content $jsx | Measure-Object -Line).Lines
+          "JSX: $lines 行, $([math]::Round($bytes.Length / 1KB, 1)) KB"
+
+      - name: Stage release package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '${{ steps.meta.outputs.version }}'
+          $stage = "build/balloonist-$version"
+          New-Item -ItemType Directory -Force -Path "$stage/dist", "$stage/docs", "$stage/tools/raster" | Out-Null
+
+          Copy-Item dist/Balloonist.jsx "$stage/dist/"
+          Copy-Item README.md, LICENSE, package.json "$stage/"
+          Copy-Item tools/install-into-indesign.ps1, tools/install-mac.sh, tools/run-jsx.ps1 "$stage/tools/"
+          Copy-Item tools/raster/BalloonistRaster, tools/raster/BalloonistRaster.exe, tools/raster/BalloonistRaster-osx-arm64, tools/raster/BalloonistRaster-osx-x64 "$stage/tools/raster/"
+          Copy-Item tools/raster/core.go, tools/raster/modes.go, tools/raster/main.go, tools/raster/dump.go, tools/raster/go.mod "$stage/tools/raster/"
+          Copy-Item tools/raster/BalloonistRaster.cs, tools/raster/build-raster.ps1, tools/raster/compare.js "$stage/tools/raster/"
+          Copy-Item docs/*.md "$stage/docs/"
+
+          Compress-Archive -Path "$stage/*" -DestinationPath "build/balloonist-$version.zip" -CompressionLevel Optimal
+          Copy-Item dist/Balloonist.jsx "build/balloonist-$version.jsx"
+
+          $sums = Get-ChildItem build -File | Where-Object { $_.Extension -in '.zip', '.jsx' } | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)"
+          }
+          $sums | Set-Content -Path build/SHA256SUMS.txt -Encoding utf8
+          Get-ChildItem build -File | Select-Object Name, Length
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: Balloonist ${{ steps.meta.outputs.version }} · 气泡工作台
+          body: |
+            ## 安装
+
+            下载 `balloonist-${{ steps.meta.outputs.version }}.zip`，解压后运行对应平台的安装脚本：
+
+            Windows：
+
+            ```powershell
+            pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\install-into-indesign.ps1 -NoBuild
+            ```
+
+            macOS：
+
+            ```sh
+            sh tools/install-mac.sh --no-build
+            ```
+
+            也可以手动把 `dist/Balloonist.jsx` 放进 InDesign 的 Scripts Panel，并把 `tools/raster/` 里的分析器复制到用户目录。完整说明见压缩包内的 `README.md`。
+
+            校验和见 `SHA256SUMS.txt`。
+          files: |
+            build/balloonist-${{ steps.meta.outputs.version }}.zip
+            build/balloonist-${{ steps.meta.outputs.version }}.jsx
+            build/SHA256SUMS.txt
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false

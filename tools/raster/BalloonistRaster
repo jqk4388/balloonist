@@ -1,0 +1,37 @@
+#!/bin/sh
+# Balloonist raster analyser - macOS launcher.
+#
+# The analyser is a plain Go binary, one per CPU. This script picks the right
+# one so the plugin can always call "BalloonistRaster" no matter whether the
+# machine is Apple silicon or Intel (also under Rosetta: the shell that asks
+# is translated, so uname reports x86_64 and the Intel build is used).
+#
+# Usage: BalloonistRaster <request.txt> <result.json>
+
+dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+pick() {
+    if [ -x "$1" ]; then
+        echo "$1"
+        return 0
+    fi
+    return 1
+}
+
+case "$(uname -m 2>/dev/null)" in
+    arm64|aarch64) bin=$(pick "$dir/BalloonistRaster-osx-arm64") ;;
+    *)             bin=$(pick "$dir/BalloonistRaster-osx-x64") ;;
+esac
+
+# only one architecture copied next to this script: use whatever is there
+[ -n "$bin" ] || bin=$(pick "$dir/BalloonistRaster-osx-arm64") || bin=$(pick "$dir/BalloonistRaster-osx-x64")
+
+if [ -z "$bin" ]; then
+    echo "BalloonistRaster: no analyser binary next to $0" >&2
+    exit 9
+fi
+
+# a zip download or a git checkout on a FAT drive may drop the executable bit
+[ -x "$bin" ] || chmod +x "$bin" 2>/dev/null
+
+exec "$bin" "$@"

@@ -1,0 +1,29 @@
+node_modules/
+.runtime/
+*.log
+
+# 调试产物（脚本本身保留）
+tools/**/*.txt
+tools/**/*.png
+tools/**/*.json
+tools/proto/
+
+# 参考素材 / 官方文档（不进仓库）
+docs/chm/
+docs/images/
+
+# 编译产物：按需提交（npm run build 可再生）
+# dist/
+
+# 本地打包产物
+build/
+
+# 调试用文档备份 / 一次性补丁脚本（都不进仓库）
+tools/*.indd
+tools/patch_*.py
+tools/probe.local*.jsx
+tools/seg*.py
+
+# 系统垃圾
+.DS_Store
+Thumbs.db
