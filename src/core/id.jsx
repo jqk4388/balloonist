@@ -201,14 +201,28 @@ B.id = (function () {
                 var fr = null;
                 try { fr = page.textFrames; } catch (eFr) { fr = null; }
                 if (fr && fr.length) {
-                    var absolute = false, i;
+                    /* One imported frame that just bleeds past the trim edge
+                       must not flip the whole page into spread coordinates:
+                       on the sample the page-10 copy is page-local (x 8..376
+                       for a 362.8-wide page), but a single 376-pt frame made
+                       the old `gb[3] > pw + 10` test fire, shifting all 17
+                       frames by 362.8 and making every match fail. Vote on
+                       the majority of frame centres instead. */
+                    var tol = 12, inX = 0, inY = 0, total = 0, i, gb, mx, my;
                     for (i = 0; i < fr.length; i++) {
-                        var gb = null;
+                        gb = null;
                         try { gb = fr[i].geometricBounds; } catch (eGb) { gb = null; }
                         if (!gb) continue;
-                        if (gb[3] > pw + 10 || gb[1] < -10) { absolute = true; break; }
+                        total++;
+                        mx = (gb[1] + gb[3]) / 2;
+                        my = (gb[0] + gb[2]) / 2;
+                        if (mx >= -tol && mx <= pw + tol) inX++;
+                        if (my >= -tol && my <= ph + tol) inY++;
                     }
-                    if (absolute) origin = { x: b[1], y: b[0] };
+                    if (total) {
+                        if (inX < total * 0.6) origin.x = b[1];
+                        if (inY < total * 0.6) origin.y = b[0];
+                    }
                 }
             } catch (e) { }
             origin.x = B.geom.round(origin.x, 3);
@@ -659,6 +673,64 @@ B.id = (function () {
             }
             apply(best);
             return { from: B.geom.round(mx, 2), to: B.geom.round(best, 2), iterations: it, overflow: false, mode: 'bubble' };
+        },
+
+        /* ---------- copy layers ---------- */
+
+        /* Studios name the translated-text layer whatever they like: Text,
+           文字, 汉化, CN, 中文, 翻譯... A hard-coded 'Text' leaves the copy
+           visible in the exported page image on every other file, so the
+           analyser sees the lettering as art. These aliases also allow a
+           partial name such as "Text 图层" or "中文翻译". */
+        copyAliases: ['text', 'type', 'copy', 'lettering', 'translation', 'translate',
+            'cn', 'chs', 'cht', 'zh', 'chinese',
+            '文字', '文本', '中文', '汉化', '翻译', '译文', '字幕', '对白', '對白'],
+        /* never hide a layer whose name says it is artwork: a studio may call
+           it "Chinese background" and hiding it would erase the balloon art */
+        artWords: ['art', 'artwork', 'image', 'img', 'picture', 'photo', 'graphic',
+            'illustration', 'background', 'bg', 'line', 'lines', 'lineart', 'sketch',
+            'tone', 'color', 'colour', 'scan', 'texture',
+            '图', '图像', '背景', '底图', '线稿', '上色', '网点', '素材', '画面', '原图'],
+
+        isCopyLayerName: function (name) {
+            if (!name) return false;
+            var raw = String(name).replace(/^\s+|\s+$/g, '');
+            if (!raw) return false;
+            var low = raw.toLowerCase(), n;
+            /* artwork names win over the copy aliases */
+            for (n = 0; n < B.id.artWords.length; n++) {
+                if (low.indexOf(B.id.artWords[n].toLowerCase()) >= 0) return false;
+            }
+            /* ASCII names match whole tokens, so "texture" is not "text" */
+            var tokens = low.split(/[^a-z0-9]+/), i;
+            for (i = 0; i < tokens.length; i++) {
+                for (n = 0; n < B.id.copyAliases.length; n++) {
+                    if (tokens[i] === B.id.copyAliases[n]) return true;
+                }
+            }
+            /* CJK aliases are matched as substrings; those are meaningful */
+            for (n = 0; n < B.id.copyAliases.length; n++) {
+                if (/[^\x00-\x7f]/.test(B.id.copyAliases[n]) && raw.indexOf(B.id.copyAliases[n]) >= 0) return true;
+            }
+            return false;
+        },
+
+        /* every layer that looks like the translated-text layer. The actual
+           frames passed to assign() are the best evidence (copyLayers), this
+           list is the fallback for tools that only analyse a page. */
+        copyLayerNames: function (doc, skipName) {
+            var out = [], i, L, name;
+            try {
+                for (i = 0; i < doc.layers.length; i++) {
+                    L = doc.layers[i];
+                    try { name = L.name; } catch (eN) { name = ''; }
+                    if (!name) continue;
+                    if (skipName && name === skipName) continue;
+                    if (!B.id.isCopyLayerName(name)) continue;
+                    out.push(name);
+                }
+            } catch (eLayers) { }
+            return out;
         },
 
         /* look a layer up without creating it */

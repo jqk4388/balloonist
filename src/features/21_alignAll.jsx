@@ -22,6 +22,10 @@ B.feature({
         { key: 'snapNear', label: '允许就近吸附', type: 'bool', def: true },
         { key: 'maxDist', label: '吸附距离 (pt)', type: 'number', def: 48 },
         { key: 'minOverlap', label: '墨迹覆盖比下限', type: 'number', def: 0.25 },
+        { key: 'autoShift', label: '自动补偿整批偏移', type: 'bool', def: true },
+        { key: 'shiftX', label: '手动左右偏移 (pt, +右)', type: 'number', def: 0 },
+        { key: 'shiftY', label: '手动上下偏移 (pt, +下)', type: 'number', def: 0 },
+        { key: 'bubblePad', label: '气泡描边容差 (pt, -1=自动)', type: 'number', def: -1 },
         { key: 'offsetY', label: '目标点下移 (pt)', type: 'number', def: 2 },
         { key: 'maxWeakShift', label: '弱匹配最大移动 (pt)', type: 'number', def: 60 },
         { key: 'detect', label: '检测器 (blobs/auto)', type: 'text', def: 'blobs' },
@@ -57,6 +61,10 @@ B.feature({
             snapNear: ctx.cfg.snapNear,
             onlyText: ctx.cfg.onlyText,
             skipLayer: ctx.cfg.skipLayer,
+            autoShift: ctx.cfg.autoShift === true,
+            shiftX: ctx.cfg.shiftX || 0,
+            shiftY: ctx.cfg.shiftY || 0,
+            bubblePad: ctx.cfg.bubblePad === undefined ? -1 : ctx.cfg.bubblePad,
             offsetY: ctx.cfg.offsetY,
             maxWeakShift: ctx.cfg.maxWeakShift,
             force: true
@@ -116,7 +124,11 @@ B.feature({
                         : '第' + g.pageNumber + '页 ' + (r.reason || '失败')
                 });
             }
-            if (ctx.cfg.dryRun) ctx.info('第' + g.pageNumber + '页：' + g.bubbleCount + ' 个气泡，' + g.items.length + ' 个框');
+            if (ctx.cfg.dryRun) {
+                var sh = g.shift || { x: 0, y: 0, mode: 'none' };
+                ctx.info('第' + g.pageNumber + '页：' + g.bubbleCount + ' 个气泡，' + g.items.length + ' 个框' +
+                    (sh.mode !== 'none' ? '，匹配前补偿 ' + sh.x + ',' + sh.y + 'pt（' + sh.mode + '）' : ''));
+            }
         }
 
         var msg;

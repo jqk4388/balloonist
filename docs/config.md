@@ -20,7 +20,7 @@
 | `dil` | `1` | 掩膜膨胀像素 |
 | `h` | `0.35` | 距离变换 h-maxima 的抑制深度，控制气泡被拆成几块 |
 | `debugDump` | `false` | 保留每次分析请求/结果与中间图到 `tmp/` |
-| `hideForExport` | `true` | 取图时隐藏文字层、诊断层与 `SFX`/`Text`（`cleanLayer` 保留，白块用来盖住原文） |
+| `hideForExport` | `true` | 取图时隐藏文字层、诊断层、自定义 `hideLayers`、文本框实际所在图层，以及名称像译文层的图层（`Text`/`文字`/`中文`/`汉化`/`CN` 等，会排除 `art`/`image`/`图` 一类美术层词）；`skipLayer` 保持可见，`cleanLayer` 保留（白块用来盖住原文） |
 | `maxPct` | `2` | 预留；各功能用自己选项里的 `maxPct` |
 | `cleanFillCMYK` | `[0,0,0,2]` | 气泡涂白的近白色板；纯 0% 白会在 PNG 导出里透出底图 |
 | `debugStrokeRGB` | `[255,0,0]` | 诊断线颜色 |
@@ -98,7 +98,7 @@
 
 ### 气泡居中 `alignAll`
 
-见 [align-all.md](align-all.md)。选项：`allPages`、`onlyText`、`skipLayer`（默认 `SFX`）、`moveOnly`（默认开）、`byInk`、`resizeToBox`（仅在关闭 `moveOnly` 时生效）、`fitSize`（预留，当前一律不缩字号）、`snapNear`（默认开）、`maxDist`（默认 48）、`offsetY`（默认 2 pt）、`maxWeakShift`（默认 60 pt）、`detect`、`lightThr`、`minFill`、`dpi`（默认 150，0 沿用全局）、`dryRun`、`minPct`/`maxPct`（预留）。
+见 [align-all.md](align-all.md)。选项：`allPages`、`onlyText`、`skipLayer`（默认 `SFX`）、`moveOnly`（默认开）、`byInk`、`resizeToBox`（仅在关闭 `moveOnly` 时生效）、`fitSize`（预留，当前一律不缩字号）、`snapNear`（默认开）、`maxDist`（默认 48）、`minOverlap`（默认 0.25）、`bubblePad`（描边容差，默认 -1 自动约 6–20 pt）、`autoShift`（自动补偿整批偏移，默认开）、`shiftX`/`shiftY`（手动整批偏移，正值右/下）、`offsetY`（默认 2 pt）、`maxWeakShift`（默认 60 pt）、`detect`、`lightThr`、`minFill`、`dpi`（默认 150，0 沿用全局）、`dryRun`、`minPct`/`maxPct`（预留）。
 
 ### 适配气泡 `fit`
 

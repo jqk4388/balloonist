@@ -41,6 +41,11 @@ B.geom = {
         return B.geom.rect(r.x1 - d, r.y1 - d, r.x2 + d, r.y2 + d);
     },
 
+    /* move a rect without resizing it */
+    translate: function (r, dx, dy) {
+        return B.geom.rect(r.x1 + (dx || 0), r.y1 + (dy || 0), r.x2 + (dx || 0), r.y2 + (dy || 0));
+    },
+
     /* pull the rect inwards by d on every side */
     deflate: function (r, d) {
         return B.geom.rect(r.x1 + d, r.y1 + d, r.x2 - d, r.y2 - d);
