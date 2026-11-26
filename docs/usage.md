@@ -27,15 +27,15 @@ sh tools/install-mac.sh              # 会先 node build.js
 sh tools/install-mac.sh --no-build   # 只安装
 ```
 
-无管理员权限时 Windows 脚本会退到 `%APPDATA%\Adobe\InDesign\Scripts Panel`，并在 InDesign 的「用户脚本」下出现（mac 脚本本来装的都是用户脚本目录，不存在权限问题）。
+Windows 安装脚本会自动区分中文版和英文版的脚本目录：中文版使用 `%APPDATA%\Adobe\InDesign\Version 20.0-J\zh_CN\Scripts\Scripts Panel`，英文版使用 `%APPDATA%\Adobe\InDesign\Scripts Panel`；找到哪个就装哪个，两个目录不能混用。
 
-**手动安装**：把 `dist/Balloonist.jsx` 复制到
+**手动安装**：把 `dist/Balloonist.jsx` 复制到中文版的版本/语言目录：
 
 ```
-C:\Program Files\Adobe\Adobe InDesign 2025\Scripts\Scripts Panel\
+%APPDATA%\Adobe\InDesign\Version 20.0-J\zh_CN\Scripts\Scripts Panel\
 ```
 
-或
+英文版则复制到：
 
 ```
 %APPDATA%\Adobe\InDesign\Scripts Panel\

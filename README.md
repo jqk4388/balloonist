@@ -55,17 +55,19 @@ sh tools/install-mac.sh --no-build
 
 **1. 插件 JSX**
 
-Windows 可放到：
+中文版 InDesign 放到版本/语言目录（`20.0-J` 会随 InDesign 版本变化）：
 
 ```text
-C:\Program Files\Adobe\Adobe InDesign 2025\Scripts\Scripts Panel\
+%APPDATA%\Adobe\InDesign\Version 20.0-J\zh_CN\Scripts\Scripts Panel\
 ```
 
-没有管理员权限时放到：
+英文版 InDesign 放到共享目录：
 
 ```text
 %APPDATA%\Adobe\InDesign\Scripts Panel\
 ```
+
+这两个位置不能混用。安装脚本会自动识别已存在的版本/语言目录，并优先装到中文版目录。
 
 macOS 放到（`<语言>` 可能是 `zh_CN`、`en_US` 等）：
 

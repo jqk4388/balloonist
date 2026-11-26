@@ -1,6 +1,6 @@
 {
   "name": "balloonist",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "Balloonist (气泡工作台) — InDesign plugin for manga / comic lettering, with TypeR-style speech-bubble centring",
   "keywords": ["indesign", "extendscript", "manga", "scanlation", "typesetting"],
